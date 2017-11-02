@@ -12,8 +12,8 @@ import org.parboiled.support.ParsingResult;
 import org.parboiled.support.ToStringFormatter;
 import org.parboiled.trees.GraphNode;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.uspto.query.parser.BoolParsingRules.CalcNode;
+import com.uspto.query.parser.BoolParsingRules.BoolNode;
+import com.uspto.query.parser.SpanParsingRules.SpanNode;
 
 
 
@@ -21,6 +21,7 @@ public class BoolParseMain {
 	
 
 
+    Object value = null;
 	private static Logger logger = Logger.getLogger("parboilded");
 
 	public String formatSearchText(String input, String operator) {
@@ -28,10 +29,9 @@ public class BoolParseMain {
 		BoolParsingRules parser = Parboiled.createParser(BoolParsingRules.class);
         String output = "";
 
-		CalcNode.setDefaultOp(operator.toUpperCase());
+		//CalcNode.setDefaultOp(operator.toUpperCase());
 
         ParsingResult<?> result = new RecoveringParseRunner(parser.InputLine()).run(input);
-        Object value = null;
 
         if (!result.parseErrors.isEmpty()) {
         	logger.info(ErrorUtils.printParseError(result.parseErrors.get(0)));
@@ -66,14 +66,32 @@ public class BoolParseMain {
         return output;
 	}
 	
-	public static void main(String args[]){
+	public Object parseQuery(String input, String operator){
+		BoolParsingRules parser = Parboiled.createParser(BoolParsingRules.class);
+		//CalcNode.setDefaultOp(operator.toUpperCase());
+		
+		ParsingResult<?> result = new RecoveringParseRunner(parser.InputLine()).run(input);
+        
+        if(result.hasErrors()){
+        	System.out.println((ErrorUtils.printParseError(result.parseErrors.get(0))));
+        	value = (Object)input;
+        	return value;
+        }else{
+        	value = result.parseTreeRoot.getValue();
+        	BoolNode boolNode = BoolNode.class.cast(value);
+        	boolNode.setDefaultOp(operator);
+        	return boolNode.getValue();
+        }
+	}
+	
+	/*public static void main(String args[]){
 		BoolParseMain parseMain = new BoolParseMain();
 		//System.out.println(parseMain.formatSearchText("CISCO OR VPN OR CLIENT OR cisco?","AND"));
 		//System.out.println(parseMain.formatSearchText("cisco? OR VPN OR CLIENT OR ABC OR DEF","AND"));
 		//System.out.println(parseMain.formatSearchText("VPN AND CLIENT AND CISCO AND cisco? OR ABC OR DEF AND XYZ MMM","AND"));
 		//System.out.println(parseMain.formatSearchText("VPN ADJ CLIENT ADJ CISCO","AND"));
 		//System.out.println(parseMain.formatSearchText("cisco  ADJ2 Client AdJ vpn","AND"));
-		System.out.println(parseMain.formatSearchText("(cisco OR XYZ) AND VPN  (client OR router) cisco? OR @AD>19961011 technical","AND"));
+		//System.out.println(parseMain.formatSearchText("(cisco OR XYZ) AND VPN  (client OR router) cisco? OR @AD>19961011 technical","AND"));
 		//System.out.println(parseMain.formatSearchText("cisco  AND VPN NEAR client","AND"));
 		//System.out.println(parseMain.formatSearchText("cisco  OR NOT router","AND"));
 		//System.out.println(parseMain.formatSearchText("cisco OR NOT VPN OR NOT client OR NOT technical","AND"));
@@ -81,7 +99,9 @@ public class BoolParseMain {
 		//System.out.println(parseMain.formatSearchText("cisco  NOT VPN  NOT client  NOT technical","AND"));
 		//System.out.println(parseMain.formatSearchText("cisco OR NOT router OR NOT client","AND"));
 		//System.out.println(parseMain.formatSearchText("router.ti","AND"));
-	}
+		System.out.println(parseMain.formatSearchText("vpn~3 router cisco^5 abc~23", "AND"));
+		//System.out.println(parseMain.parseQuery("cisco vpn client", "AND"));
+	}*/
 
 
 

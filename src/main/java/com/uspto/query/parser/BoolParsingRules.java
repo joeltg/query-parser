@@ -15,12 +15,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.uspto.query.parser.BoolParsingRules.CalcNode;
+import com.uspto.query.parser.BoolParsingRules.BoolNode;
 
 
 
 @BuildParseTree
-public class BoolParsingRules extends BaseParser<CalcNode> {
+public class BoolParsingRules extends BaseParser<BoolNode> {
 	public Rule InputLine() {
 		return Sequence(Expression(), EOI);
 	}
@@ -31,7 +31,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
         		ZeroOrMore(
                         OR(), op.set(match()),
                         Expr(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new BoolNode(op.get(), pop(1), pop()))
                 ));
     }
 
@@ -42,7 +42,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
                 ZeroOrMore(
                         XOR(), op.set(match()),
                         ExpTerm(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new BoolNode(op.get(), pop(1), pop()))
                         //push (new  CalcCNode.op.get().pop(1),pop()))
                         
                 )
@@ -56,7 +56,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
                 ZeroOrMore(
                 		FirstOf(AND(), NOT()), op.set(match()),
                 		SameExp(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new BoolNode(op.get(), pop(1), pop()))
                 )
         );
     }
@@ -68,7 +68,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
                  ZeroOrMore(
                          SAME(), op.set(match()),
                          WithExp(),
-                         push(new CalcNode(op.get(), pop(1), pop()))
+                         push(new BoolNode(op.get(), pop(1), pop()))
                  )
          );
      }
@@ -80,7 +80,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
                  ZeroOrMore(
                          WITH(), op.set(match()),
                          Term(),
-                         push(new CalcNode(op.get(), pop(1), pop()))
+                         push(new BoolNode(op.get(), pop(1), pop()))
                  )
          );
      }
@@ -92,7 +92,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
                 ZeroOrMore(
                 		FirstOf(ADJ(), NEAR(), ONEAR()), op.set(match()),
                 		Factor(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new BoolNode(op.get(), pop(1), pop()))
                 )
         );
     }
@@ -102,9 +102,9 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
         return Sequence(
                 Atom(),
                 ZeroOrMore(
-                		FirstOf("^", "~","|"), op.set(match()),
+                		AnyOf("|"), op.set(match()),
                         Regex(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new BoolNode(op.get(), pop(1), pop()))
                 )
         );
     }
@@ -112,20 +112,20 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     Rule Atom() {
         return Sequence(SpacelessAtom(),
         		Optional(TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), 
-        				NonWhiteSpaceAtom(), push(new CalcNode("SPACE", pop(1), pop())))
+        				NonWhiteSpaceAtom(), push(new BoolNode("SPACE", pop(1), pop())))
     			);
     }
        
     
     Rule SpacelessAtom() {
    	 Var<String> op = new Var<String>();
-       return Sequence(SubAtom(), ContextOperator(), op.set(match()), push(new CalcNode(op.get(), pop(), new CalcNode(""))));
+       return Sequence(SubAtom(), ContextOperator(), op.set(match()), push(new BoolNode(op.get(), pop(), new BoolNode(""))));
     }
       
     
     Rule NonWhiteSpaceAtom() {
       	 Var<String> op = new Var<String>();
-          return Sequence(NonWhitespaceSubAtom(), ContextOperator(), op.set(match()), push(new CalcNode(op.get(), pop(), new CalcNode(""))));
+          return Sequence(NonWhitespaceSubAtom(), ContextOperator(), op.set(match()), push(new BoolNode(op.get(), pop(), new BoolNode(""))));
     }
     
        
@@ -145,7 +145,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new BoolNode("SPACE", pop(1), pop())))
     			);
     }
 
@@ -154,14 +154,14 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     			Sequence(
     					'L', OneOrMore(Digit())
     					),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new BoolNode(matchOrDefault(" ")))
     			);
     }
 
     Rule Parens() {
         return Sequence("(", Expression(), ")", 
         		ZeroOrMore(NonOperatorWhiteSpace(), Expression(),
-        				push(new CalcNode("SPACE", pop(1), pop()))));
+        				push(new BoolNode("SPACE", pop(1), pop()))));
     }
     Rule NonOperatorWhiteSpace() {
     	 return OneOrMore(TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), AnyOf(" \t\f"));
@@ -173,7 +173,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new BoolNode("SPACE", pop(1), pop())))
     			);
     }
 
@@ -184,7 +184,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     					ZeroOrMore(TestNot('"'),FirstOf(' ', OneOrMore(ANY))),
     					'"'
     					),
-    			push(new CalcNode("ADJ", splitPhrase(match())))
+    			push(new BoolNode("ADJ", splitPhrase(match())))
     			);
     }
     
@@ -198,7 +198,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new BoolNode("SPACE", pop(1), pop())))
     			);
     }
 
@@ -223,7 +223,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     	    			Optional(FirstOf("<=", ">=", '<', '>', '=', "<>"), Optional('"'),
     	    			FirstOf("19", "20"), Digit(), Digit(), Optional('"'))
     			)),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new BoolNode(matchOrDefault(" ")))
     			);
     }
     
@@ -239,7 +239,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     					FirstOf(":<", ":>", ":", "=<", "=>", "="), op.set(match()),
     					WhiteSpace(),
     					Expression(),
-    					push(new CalcNode(op.get(), pop(1), pop()))
+    					push(new BoolNode(op.get(), pop(1), pop()))
     			));
     }
     
@@ -253,7 +253,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     					FirstOf(":<", ":>", ":", "=<", "=>", "="), op.set(match()),
     					WhiteSpace(),
     					Expression(),
-    					push(new CalcNode(op.get(), pop(1), pop()))
+    					push(new BoolNode(op.get(), pop(1), pop()))
     			));
     }
 
@@ -266,7 +266,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new BoolNode("SPACE", pop(1), pop())))
     			);
     }
     
@@ -278,7 +278,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new BoolNode("SPACE", pop(1), pop())))
     			);
     }
     
@@ -287,7 +287,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     Rule Regex() {
     	return Sequence(
     			ZeroOrMore(TestNot(IgnoreCase("NOT ")), TestNot(AnyOf(":=~^<>")), FirstOf(OneOrMore(Alphabet()), AnyOf(",${}?+*"))),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new BoolNode(matchOrDefault(" ")))
     			);
     }
     
@@ -296,12 +296,12 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     Rule NonWhitespaceRegex() {
     	return Sequence(
     			OneOrMore(TestNot(IgnoreCase("NOT ")), TestNot(AnyOf(":=~^<>")), FirstOf(OneOrMore(Alphabet()), AnyOf(",${}?+*"))),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new BoolNode(matchOrDefault(" ")))
     			);
     }
 
     Rule Alphabet() {
-    	return FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), Digit(), '_', '-','/');
+    	return FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), Digit(), '_', '-','/', '^','~');
     }
 
     Rule Digit() {
@@ -394,14 +394,14 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
 
     
    
-    public static class CalcNode extends ImmutableBinaryTreeNode<CalcNode> {
+    public class BoolNode extends ImmutableBinaryTreeNode<BoolNode> {
         private Object value;
         private String[] operands;
         private String operator;
         private String distance = "0";
-        private static String defaultOp = "AND";
+        private String defaultOp = "AND";
         private ObjectMapper mapper = new ObjectMapper();
-        private static String defaultField = "_all";
+        private String defaultField = "_all";
         private boolean isRegex = false;
         private boolean isWildcard = false;
         JsonNode leftNode;
@@ -416,6 +416,11 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
         ArrayNode mustNotClauses;
     	Object left;
     	Object right;
+    	JsonNode jsonNode;
+    	JsonNode fieldValueNode;
+		ObjectNode objectNode;
+		String fuzziness = "0";
+		String boostValue = "0";
     	
 
 
@@ -423,30 +428,30 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
 			return defaultOp;
 		}
 
-		public static void setDefaultOp(String defaultOp) {
-			CalcNode.defaultOp = defaultOp;
+		public void setDefaultOp(String defaultOp) {
+			this.defaultOp = defaultOp;
 		}
 		
-		public static String getDefaultField() {
+		public String getDefaultField() {
 			return defaultField;
 		}
 
-		public static void setDefaultField(String defaultField) {
-			CalcNode.defaultField = defaultField;
+		public void setDefaultField(String defaultField) {
+			this.defaultField = defaultField;
 		}
 
-		public CalcNode(String operator, String[] operands) {
+		public BoolNode(String operator, String[] operands) {
             super(null, null);
             this.operator = operator.toUpperCase().trim();
             this.operands = operands;
         }
 
-		public CalcNode(Object value) {
+		public BoolNode(Object value) {
             super(null, null);
             this.value = value;
         }
 
-        public CalcNode(String operator, CalcNode left, CalcNode right) {
+        public BoolNode(String operator, BoolNode left, BoolNode right) {
             super(left, right);
             operator = operator.toUpperCase().trim();
 
@@ -477,11 +482,8 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
         }
 
         
-		public Object getValue() throws JsonProcessingException {
+		public Object getValue() {
 			String strValue = "";
-			JsonNode fieldValue;
-			JsonNode jsonNode;
-			ObjectNode objectNode;
             if (operator == null) {
 	            	if(value instanceof String){
 	            		strValue = (String)value;
@@ -510,21 +512,50 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
 	                		isRegex = true;
 	                	}
 	        		}
-	            	if (strValue.matches(".*[\\^\\|\\+].*")) {
+	            	if (strValue.startsWith("^")) {
 	            		isRegex = true;
 	            	} else if (strValue.endsWith("*") || strValue.endsWith("?")){
 	            		isWildcard = true;
 	            	}
 	            	else if (strValue.startsWith("@")) {
 	            		return getDate(strValue);
+	            	}else if(strValue.contains("^")){
+	            		boostValue = strValue.substring(strValue.indexOf("^")+1);
+	            		if(!boostValue.matches("\\d+")){
+	            			boostValue = "0";
+	            		}
+	            		strValue = strValue.substring(0,strValue.indexOf("^"));
+	            		objectNode = mapper.createObjectNode();
+	            		objectNode.put("value", strValue);
+	            		objectNode.put("boost", boostValue);
+	            		term = mapper.createObjectNode();
+	            		term.replace(defaultField, objectNode);
+	            		json = mapper.createObjectNode();
+	            		json.replace("term",term);
+	            		return (JsonNode)json;
+	            	}
+	            	else if(strValue.contains("~")){
+	            		fuzziness = strValue.substring(strValue.indexOf("~")+1);
+	            		if(!fuzziness.matches("\\d+")){
+	            			fuzziness = "0";
+	            		}
+	            		strValue = strValue.substring(0,strValue.indexOf("~"));
+	            		objectNode = mapper.createObjectNode();
+	            		objectNode.put("value", strValue);
+	            		objectNode.put("fuzziness", fuzziness);
+	            		term = mapper.createObjectNode();
+	            		term.replace(defaultField, objectNode);
+	            		json = mapper.createObjectNode();
+	            		json.replace("fuzzy",term);
+	            		return (JsonNode)json;
 	            	}
 	            	if (isWildcard || isRegex){
-	            		 fieldValue = createFieldValueNode(getDefaultField(), strValue,false);
+	            		 fieldValueNode = createFieldValueNode(getDefaultField(), strValue,false);
 	            		 objectNode = mapper.createObjectNode();
 	                     if(isWildcard){
-	                    	 objectNode.replace("wldcard", fieldValue);
+	                    	 objectNode.replace("wildcard", fieldValueNode);
 	                     }else{
-	                    	 objectNode.replace("regexp",fieldValue);
+	                    	 objectNode.replace("regexp",fieldValueNode);
 	                     }
 	                     return (JsonNode)objectNode;
 	            	}
@@ -541,21 +572,18 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
             	this.operator = "OR";
             }
             if (left()!= null && left().getValue() instanceof String && ((String)left().getValue()).matches("L[0-9]+")) {
-            	System.out.println("Left - L[0-9]+ " + right().getValue().toString() );
             	return right().getValue();
             }
             if (right()!= null && right().getValue() instanceof String && ((String)right().getValue()).matches("L[0-9]+")) {
-            	System.out.println("Right - L[0-9]+ " + left().getValue().toString() );
             	return left().getValue();
             }
             
             left = left().getValue();
             right = right().getValue();
             
-            //System.out.println("left : "+left.toString());
-            //System.out.println("right : "+right.toString());
+            
             if (operator.equalsIgnoreCase("AND")) {
-            	//System.out.println("Entering AND");
+            
             	json = mapper.createObjectNode();
             	boolAND = mapper.createObjectNode();
                 mustClauses = mapper.createArrayNode();
@@ -570,7 +598,6 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
             		
             	} else {
             		if(left instanceof JsonNode  ){
-            			//System.out.println("AND L JSON NOde");
             			 jsonNode =  ((JsonNode)left).get("BOOL_AND");
             			if( jsonNode != null){
 		            			ArrayNode clauses =  (ArrayNode) jsonNode.get("must");
@@ -667,14 +694,10 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
                 return json;
 
             } else if (operator.equalsIgnoreCase("NOT") || operator.equalsIgnoreCase("-")) {
-            	//System.out.println("Entering into Not");
             	json = mapper.createObjectNode();
             	boolAND = mapper.createObjectNode();
                 mustNotClauses = mapper.createArrayNode();
                 mustClauses = mapper.createArrayNode();
-                
-                System.out.println(" Left is null : "+ left.toString());
-                //System.out.println(" Right is null : "+ right.toString());
                 
                 if(left != null){
                 	if(left instanceof String){
@@ -726,7 +749,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
                 	json.replace("BOOL_AND",boolAND);
                 }
                 return json;
-            } else if (operator.equalsIgnoreCase("~")) {
+            } /*else if (operator.equalsIgnoreCase("~")) {
             	JsonNode termNode;
             	ObjectNode fieldValueNode;
             	ObjectNode fuzzy;
@@ -855,7 +878,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
             		}
             	}
             	return null;
-            } else if (operator.contains(":") || operator.contains("=")) {
+            }*/ else if (operator.contains(":") || operator.contains("=")) {
             	if (operator.equalsIgnoreCase(":<") || operator.equalsIgnoreCase("=<")) {
             		return ("CONTEXT(" + left().getValue() + "):<" + right().getValue());
             	} else if (operator.equalsIgnoreCase(":>") || operator.equalsIgnoreCase("=>")) {
@@ -932,10 +955,7 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
             	return json;
             } 
             else {
-            	
-            	//System.out.println("LEFT: " + left().getValue());
-            	//System.out.println("OP: " + operator);
-            	//System.out.println("RIGHT: " + right().getValue());
+
                 throw new IllegalStateException();
             }
 			//return distance;
@@ -1065,44 +1085,18 @@ public class BoolParsingRules extends BaseParser<CalcNode> {
     		
     		return rangeNode;
         }
-        
-       /* public ArrayNode createSpanTerms(String term,String defaultField){
-        	String termInLowerCase;
-        	if(term !=null){
-        		termInLowerCase = term.toLowerCase();
-        		
-        		if( termInLowerCase.indexOf(".ab.") > 0 || termInLowerCase.indexOf(".ti.")  > 0|| termInLowerCase.indexOf(".cpc.") > 0 || termInLowerCase.indexOf(".ab.") > 0
-        			|| termInLowerCase.indexOf(".ab,ti.") > 0  || termInLowerCase.indexOf(".ti,ab.") > 0){
-        			
-        		}
-        		
-        	}
-        	return null;
-        }*/
+
         @Override
         public String toString() {
             try {
-				return (operator == null ? "Value " + value : "Operator '" + operator + '\'') + " | " + getValue();//new ObjectMapper().writeValueAsString(getValue());
+            	return mapper.writeValueAsString(getValue());
 			} catch (JsonProcessingException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			return "";
         }
         
-        public   Object getParsedQuery() {
-            
-				try {
-					return getValue();
-				} catch (JsonProcessingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			return null;
-        }
-        
         public JsonNode createFieldValueNode(String field, String value,boolean nodeAsTerm){
-        	//System.out.println("value : " +value);
         	if(value !=null && !value.trim().isEmpty()){
         		ObjectNode node = mapper.createObjectNode();
             	node.put(field, value);

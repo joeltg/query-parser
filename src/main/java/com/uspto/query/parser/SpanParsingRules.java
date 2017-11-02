@@ -15,12 +15,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.uspto.query.parser.SpanParsingRules.CalcNode;
+import com.uspto.query.parser.SpanParsingRules.SpanNode;
 
 
 
 @BuildParseTree
-public class SpanParsingRules extends BaseParser<CalcNode> {
+public class SpanParsingRules extends BaseParser<SpanNode> {
 	public Rule InputLine() {
 		return Sequence(Expression(), EOI);
 	}
@@ -31,7 +31,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
         		ZeroOrMore(
                         OR(), op.set(match()),
                         Expr(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new SpanNode(op.get(), pop(1), pop()))
                 ));
     }
 
@@ -42,7 +42,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
                 ZeroOrMore(
                         XOR(), op.set(match()),
                         ExpTerm(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new SpanNode(op.get(), pop(1), pop()))
                         //push (new  CalcCNode.op.get().pop(1),pop()))
                         
                 )
@@ -56,7 +56,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
                 ZeroOrMore(
                 		FirstOf(AND(), NOT()), op.set(match()),
                 		SameExp(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new SpanNode(op.get(), pop(1), pop()))
                 )
         );
     }
@@ -68,7 +68,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
                  ZeroOrMore(
                          SAME(), op.set(match()),
                          WithExp(),
-                         push(new CalcNode(op.get(), pop(1), pop()))
+                         push(new SpanNode(op.get(), pop(1), pop()))
                  )
          );
      }
@@ -80,7 +80,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
                  ZeroOrMore(
                          WITH(), op.set(match()),
                          Term(),
-                         push(new CalcNode(op.get(), pop(1), pop()))
+                         push(new SpanNode(op.get(), pop(1), pop()))
                  )
          );
      }
@@ -92,7 +92,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
                 ZeroOrMore(
                 		FirstOf(ADJ(), NEAR(), ONEAR()), op.set(match()),
                 		Factor(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new SpanNode(op.get(), pop(1), pop()))
                 )
         );
     }
@@ -102,9 +102,9 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
         return Sequence(
                 Atom(),
                 ZeroOrMore(
-                		FirstOf("^", "~","|"), op.set(match()),
+                		AnyOf("|"), op.set(match()),
                         Regex(),
-                        push(new CalcNode(op.get(), pop(1), pop()))
+                        push(new SpanNode(op.get(), pop(1), pop()))
                 )
         );
     }
@@ -112,20 +112,20 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     Rule Atom() {
         return Sequence(SpacelessAtom(),
         		Optional(TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), 
-        				NonWhiteSpaceAtom(), push(new CalcNode("SPACE", pop(1), pop())))
+        				NonWhiteSpaceAtom(), push(new SpanNode("SPACE", pop(1), pop())))
     			);
     }
        
     
     Rule SpacelessAtom() {
    	 Var<String> op = new Var<String>();
-       return Sequence(SubAtom(), ContextOperator(), op.set(match()), push(new CalcNode(op.get(), pop(), new CalcNode(""))));
+       return Sequence(SubAtom(), ContextOperator(), op.set(match()), push(new SpanNode(op.get(), pop(), new SpanNode(""))));
     }
       
     
     Rule NonWhiteSpaceAtom() {
       	 Var<String> op = new Var<String>();
-          return Sequence(NonWhitespaceSubAtom(), ContextOperator(), op.set(match()), push(new CalcNode(op.get(), pop(), new CalcNode(""))));
+          return Sequence(NonWhitespaceSubAtom(), ContextOperator(), op.set(match()), push(new SpanNode(op.get(), pop(), new SpanNode(""))));
     }
     
        
@@ -145,7 +145,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new SpanNode("SPACE", pop(1), pop())))
     			);
     }
 
@@ -154,14 +154,14 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     			Sequence(
     					'L', OneOrMore(Digit())
     					),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new SpanNode(matchOrDefault(" ")))
     			);
     }
 
     Rule Parens() {
         return Sequence("(", Expression(), ")", 
         		ZeroOrMore(NonOperatorWhiteSpace(), Expression(),
-        				push(new CalcNode("SPACE", pop(1), pop()))));
+        				push(new SpanNode("SPACE", pop(1), pop()))));
     }
     Rule NonOperatorWhiteSpace() {
     	 return OneOrMore(TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), AnyOf(" \t\f"));
@@ -173,7 +173,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new SpanNode("SPACE", pop(1), pop())))
     			);
     }
 
@@ -184,7 +184,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     					ZeroOrMore(TestNot('"'),FirstOf(' ', OneOrMore(ANY))),
     					'"'
     					),
-    			push(new CalcNode("ADJ", splitPhrase(match())))
+    			push(new SpanNode("ADJ", splitPhrase(match())))
     			);
     }
     
@@ -198,7 +198,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new SpanNode("SPACE", pop(1), pop())))
     			);
     }
 
@@ -223,7 +223,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     	    			Optional(FirstOf("<=", ">=", '<', '>', '=', "<>"), Optional('"'),
     	    			FirstOf("19", "20"), Digit(), Digit(), Optional('"'))
     			)),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new SpanNode(matchOrDefault(" ")))
     			);
     }
     
@@ -239,7 +239,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     					FirstOf(":<", ":>", ":", "=<", "=>", "="), op.set(match()),
     					WhiteSpace(),
     					Expression(),
-    					push(new CalcNode(op.get(), pop(1), pop()))
+    					push(new SpanNode(op.get(), pop(1), pop()))
     			));
     }
     
@@ -253,7 +253,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     					FirstOf(":<", ":>", ":", "=<", "=>", "="), op.set(match()),
     					WhiteSpace(),
     					Expression(),
-    					push(new CalcNode(op.get(), pop(1), pop()))
+    					push(new SpanNode(op.get(), pop(1), pop()))
     			));
     }
 
@@ -266,7 +266,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new SpanNode("SPACE", pop(1), pop())))
     			);
     }
     
@@ -278,7 +278,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     			ZeroOrMore(
     					TestNot(FirstOf(AND(), OR(), XOR(), NOT(), ADJ(), NEAR(), ONEAR(), WITH(), SAME())), OneOrMore(' '),
     	    			Atom(),
-    	    			push(new CalcNode("SPACE", pop(1), pop())))
+    	    			push(new SpanNode("SPACE", pop(1), pop())))
     			);
     }
     
@@ -287,21 +287,19 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     Rule Regex() {
     	return Sequence(
     			ZeroOrMore(TestNot(IgnoreCase("NOT ")), TestNot(AnyOf(":=~^<>")), FirstOf(OneOrMore(Alphabet()), AnyOf(",${}?+*"))),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new SpanNode(matchOrDefault(" ")))
     			);
     }
-    
-    
-    
+       
     Rule NonWhitespaceRegex() {
     	return Sequence(
     			OneOrMore(TestNot(IgnoreCase("NOT ")), TestNot(AnyOf(":=~^<>")), FirstOf(OneOrMore(Alphabet()), AnyOf(",${}?+*"))),
-    			push(new CalcNode(matchOrDefault(" ")))
+    			push(new SpanNode(matchOrDefault(" ")))
     			);
     }
 
     Rule Alphabet() {
-    	return FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), Digit(), '_', '-','/');
+    	return FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), Digit(), '_', '-','/','^','~');
     }
 
     Rule Digit() {
@@ -361,10 +359,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     Rule WITH() {
     	return Sequence(
     			WhiteSpace(), IgnoreCase("WITH"), ZeroOrMore(Digit())
-    			//Optional(Digit()), Optional(Digit())
     			,WhiteSpace()
-
-    			//WhiteSpace(), IgnoreCase("WITH"), WhiteSpace()
     			);
     }
     
@@ -374,16 +369,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
     			//Optional(Digit()), Optional(Digit())
     			, WhiteSpace()
     			);
-    }
-    
-/*
-    Rule SAME() {
-    	return Sequence(
-    			WhiteSpace(), IgnoreCase("SAME"), Optional(Digit()), Optional(Digit()), WhiteSpace()
-    			);
-    }
-*/
-    
+    }   
     
     Rule NOT() {
     	return Sequence(
@@ -394,13 +380,13 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
 
     
    
-    public static class CalcNode extends ImmutableBinaryTreeNode<CalcNode> {
+    public  class SpanNode extends ImmutableBinaryTreeNode<SpanNode> {
         private Object value;
         private String[] operands;
         private String operator;
         private String distance = "0";
-        private static String defaultOp = "AND";
-        private static String defaultField = "_all";
+        private  String defaultOp = "AND";
+        private  String defaultField = "_all";
         
         private boolean AND_ORDER = false;
         private boolean isRegex = false;
@@ -424,28 +410,29 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
         ArrayNode orClauses;
         JsonNode leftNode;
     	JsonNode rightNode;
-        
+    	String fuzziness = "0";
+		String boostValue = "0";
 
 		public String getDefaultOp() {
 			return defaultOp;
 		}
 
-		public static void setDefaultOp(String defaultOp) {
-			CalcNode.defaultOp = defaultOp;
+		public  void setDefaultOp(String defaultOp) {
+			defaultOp = defaultOp;
 		}
 		
-		public CalcNode(String operator, String[] operands) {
+		public SpanNode(String operator, String[] operands) {
             super(null, null);
             this.operator = operator.toUpperCase().trim();
             this.operands = operands;
         }
 
-		public CalcNode(String value) {
+		public SpanNode(String value) {
             super(null, null);
             this.value = value;
         }
 
-        public CalcNode(String operator, CalcNode left, CalcNode right) {
+        public SpanNode(String operator, SpanNode left, SpanNode right) {
             super(left, right);
             operator = operator.toUpperCase().trim();
 
@@ -479,7 +466,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
         }
 
         
-		public Object getValue() throws JsonProcessingException {
+		public Object getValue(){
 			String strValue = "";
             if (operator == null) {
 	            	if( value instanceof String){
@@ -508,8 +495,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
 	                		isRegex = true;
 	                	}
 	        		}
-	            	
-	            	if (strValue.matches(".*[\\^\\|\\+].*")) {
+	            	if (strValue.startsWith("^")) {
 	            		isRegex = true;
 	            	} else if (strValue.endsWith("*") || strValue.endsWith("?")){
 	            		isWildcard = true;
@@ -519,6 +505,39 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
 	            		//String date = getDate(strValue);
 	            		//strValue = date;
 	            		return null;
+	            	}else if(strValue.contains("^")){
+	            		boostValue = strValue.substring(strValue.indexOf("^")+1);
+	            		if(!boostValue.matches("\\d+")){
+	            			boostValue = "0";
+	            		}
+	            		strValue = strValue.substring(0,strValue.indexOf("^"));
+	            		objectNode = mapper.createObjectNode();
+	            		objectNode.put("value", strValue);
+	            		objectNode.put("boost", boostValue);
+	            		term = mapper.createObjectNode();
+	            		term.replace(defaultField, objectNode);
+	            		json = mapper.createObjectNode();
+	            		json.replace("term",term);
+	            		return (JsonNode)json;
+	            	}
+	            	else if(strValue.contains("~")){
+	            		fuzziness = strValue.substring(strValue.indexOf("~")+1);
+	            		if(!fuzziness.matches("\\d+")){
+	            			fuzziness = "0";
+	            		}
+	            		strValue = strValue.substring(0,strValue.indexOf("~"));
+	            		objectNode = mapper.createObjectNode();
+	            		objectNode.put("value", strValue);
+	            		objectNode.put("fuzziness", fuzziness);
+	            		term = mapper.createObjectNode();
+	            		term.replace(defaultField, objectNode);
+	            		matchNode = mapper.createObjectNode();
+	            		matchNode.replace("fuzzy", term);
+	            		spanMULTI = mapper.createObjectNode();
+	            		spanMULTI.replace("match", matchNode);
+	            		json = mapper.createObjectNode();
+	            		json.replace("span_multi",spanMULTI);
+	            		return (JsonNode)json;
 	            	}
 	            	if (isWildcard || isRegex){
 	            		fieldValueNode = createFieldValueNode(getDefaultField(), strValue,false);
@@ -536,7 +555,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
 	            	}
 	            	return createFieldValueNode(getDefaultField(), strValue,true);
             	}
-            	return null;
+	            	return createFieldValueNode(getDefaultField(), "",true);
             }
             left = left().getValue();
             right = right().getValue();
@@ -696,6 +715,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
                 return json;
                 
             } else if (operator.equalsIgnoreCase("NEAR")) {
+            	System.out.println("Entering into NEAR");
             	long slop = 0;
             	json = mapper.createObjectNode();
             	spanNEAR = mapper.createObjectNode();
@@ -840,22 +860,8 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
             } else if (operator.equalsIgnoreCase("NOT") || operator.equalsIgnoreCase("-")) {
             	return (left != " " ? left : null);
 
-            } else if (operator.equalsIgnoreCase("~")) {
-               /* json =  mapper.createObjectNode();
-                spanMULTI = mapper.createObjectNode();
-                ObjectNode match = mapper.createObjectNode();
-                ObjectNode fuzzy = mapper.createObjectNode();
-                ObjectNode user = mapper.createObjectNode();
+            }/* else if (operator.equalsIgnoreCase("~")) {
                 
-                fuzzy.replace("user", user);
-                
-                spanMULTI.replace("match",fuzzy);
-                json.replace("span_multi", spanMULTI);
-                return json;*/
-            	
-            	
-            	
-            	
             	JsonNode termNode;
             	ObjectNode fieldValueNode;
             	ObjectNode fuzzy;
@@ -937,7 +943,6 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
             	return null;
 
             } else if (operator.equalsIgnoreCase("^")) {
-            	
             	JsonNode termNode;
             	ObjectNode fieldValueNode;
             	String field = null;
@@ -945,6 +950,8 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
             	String boost = null;
             	leftNode = (JsonNode)left;
             	rightNode = (JsonNode)right;
+            	System.out.println("leftNode : "+leftNode.toString());
+            	System.out.println("rightNode : "+rightNode.toString());
             	if(leftNode !=null && leftNode.has("term")){
             		termNode = leftNode.get("term");
             		if(termNode.has(defaultField)){
@@ -1002,7 +1009,7 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
             	return null;
             
 
-            } else if (operator.contains(":") || operator.contains("=")) {
+            }*/ else if (operator.contains(":") || operator.contains("=")) {
             	if (operator.equalsIgnoreCase(":<") || operator.equalsIgnoreCase("=<")) {
             		return ("CONTEXT(" + left().getValue() + "):<" + right().getValue());
             	} else if (operator.equalsIgnoreCase(":>") || operator.equalsIgnoreCase("=>")) {
@@ -1089,10 +1096,14 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
 			
         }
       
-        @Override
+       @Override
         public String toString() {
             try {
-				return (operator == null ? "Value " + value : "Operator '" + operator + '\'') + " | " + new ObjectMapper().writeValueAsString(getValue());
+            	/*Object node = getValue();
+            	System.out.println(node.getClass().getName());
+            	System.out.println(node instanceof ObjectNode);
+            	System.out.println(node instanceof JsonNode);*/
+				return mapper.writeValueAsString(getValue());
 			} catch (JsonProcessingException e) {
 				e.printStackTrace();
 			}
@@ -1115,12 +1126,12 @@ public class SpanParsingRules extends BaseParser<CalcNode> {
         	return null;
         }
 
-		public static String getDefaultField() {
+		public  String getDefaultField() {
 			return defaultField;
 		}
 
-		public static void setDefaultField(String defaultField) {
-			CalcNode.defaultField = defaultField;
+		public  void setDefaultField(String defaultField) {
+			defaultField = defaultField;
 		}
     }
 }
