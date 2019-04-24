@@ -386,7 +386,7 @@ public class SpanParsingRules extends BaseParser<SpanNode> {
         private String operator;
         private String distance = "0";
         private  String defaultOp = "AND";
-        private  String defaultField = "_all";
+        private  String defaultField = "text";
         
         private boolean AND_ORDER = false;
         private boolean isRegex = false;
