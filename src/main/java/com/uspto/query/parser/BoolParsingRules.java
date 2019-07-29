@@ -401,7 +401,7 @@ public class BoolParsingRules extends BaseParser<BoolNode> {
         private String distance = "0";
         private String defaultOp = "AND";
         private ObjectMapper mapper = new ObjectMapper();
-        private String defaultField = "text";
+        private String defaultField = "_all";
         private boolean isRegex = false;
         private boolean isWildcard = false;
         JsonNode leftNode;
